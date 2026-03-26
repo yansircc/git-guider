@@ -3,6 +3,7 @@ package training
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -57,6 +58,32 @@ func LoadTaskBank(path string) (*TaskBank, error) {
 		}
 	}
 
+	return bank, nil
+}
+
+// LoadTaskBankFS loads tasks from an embed.FS (for single-binary distribution).
+func LoadTaskBankFS(fsys fs.FS) (*TaskBank, error) {
+	bank := &TaskBank{Topics: make(map[string]TopicEntry)}
+	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".json") {
+			return err
+		}
+		data, err := fs.ReadFile(fsys, path)
+		if err != nil {
+			return err
+		}
+		var topics map[string]TopicEntry
+		if err := json.Unmarshal(data, &topics); err != nil {
+			return fmt.Errorf("parse %s: %w", path, err)
+		}
+		for k, v := range topics {
+			bank.Topics[k] = v
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 	return bank, nil
 }
 

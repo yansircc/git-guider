@@ -1,0 +1,79 @@
+{
+  "L5.1": {
+    "name": "reset --soft (撤销提交，保留暂存)",
+    "tasks": [{
+      "id": "L5.1-a",
+      "difficulty": 2,
+      "description": "最后一次提交的信息写错了。用 git reset --soft HEAD~1 撤销它（修改会留在暂存区），然后用正确的信息重新提交，信息需包含 'fixed'。",
+      "setup": [
+        "git init",
+        "echo 'base' > file.txt",
+        "git add .",
+        "git commit -m 'base'",
+        "echo 'change' > file.txt",
+        "git add .",
+        "git commit -m 'wrong message'"
+      ],
+      "verify": [
+        { "type": "commit_message_contains", "pattern": "fixed" },
+        { "type": "status_clean" }
+      ],
+      "hints": ["git reset --soft HEAD~1", "git commit -m 'fixed: update file'"],
+      "on_pass_note": "reset --soft 移动 HEAD 但不改暂存区和工作区。撤销的提交内容仍然在暂存区，可以直接重新 commit。"
+    }]
+  },
+  "L5.2": {
+    "name": "reset --mixed (撤销提交+暂存)",
+    "tasks": [{
+      "id": "L5.2-a",
+      "difficulty": 2,
+      "description": "你做了一次提交但想重新组织。用 git reset HEAD~1（默认 --mixed）撤销最后一次提交，修改会回到工作区（未暂存）。重新 add 并提交，信息需包含 'reorganized'。",
+      "setup": [
+        "git init",
+        "echo 'a' > a.txt",
+        "git add .",
+        "git commit -m 'base'",
+        "echo 'b' > b.txt",
+        "echo 'c' > c.txt",
+        "git add .",
+        "git commit -m 'add b and c'"
+      ],
+      "verify": [
+        { "type": "commit_message_contains", "pattern": "reorganized" },
+        { "type": "status_clean" }
+      ],
+      "hints": ["git reset HEAD~1", "git add .", "git commit -m 'reorganized: add b and c'"],
+      "on_pass_note": "reset --mixed（默认模式）撤销提交并取消暂存，但保留工作区文件。适合重新选择要提交的内容。"
+    }]
+  },
+  "L5.3": {
+    "name": "取消暂存 (restore --staged)",
+    "tasks": [{
+      "id": "L5.3-a",
+      "difficulty": 2,
+      "description": "你不小心 git add 了 secret.txt（不该提交）。用 git restore --staged 取消它的暂存，只提交 safe.txt。",
+      "setup": [
+        "git init",
+        "echo 'base' > base.txt",
+        "git add .",
+        "git commit -m 'init'",
+        "echo 'safe' > safe.txt",
+        "echo 'password123' > secret.txt",
+        "git add ."
+      ],
+      "verify": [
+        { "type": "file_exists", "path": "safe.txt" },
+        { "type": "commit_count", "min": 2 },
+        { "type": "gitignore_ignores", "path": "secret.txt" },
+        { "type": "status_clean" }
+      ],
+      "hints": [
+        "git restore --staged secret.txt",
+        "echo 'secret.txt' > .gitignore",
+        "git add .gitignore safe.txt",
+        "git commit -m 'add safe file, ignore secret'"
+      ],
+      "on_pass_note": "git restore --staged <file> 把文件从暂存区移回工作区（不删除文件）。配合 .gitignore 防止敏感文件被提交。"
+    }]
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "L1.1": {
+    "name": "初始化并提交",
+    "tasks": [{
+      "id": "L1.1-a",
+      "difficulty": 1,
+      "description": "创建一个新的 Git 仓库，新建 hello.txt 文件并完成第一次提交。",
+      "setup": [],
+      "verify": [
+        { "type": "commit_count", "min": 1 },
+        { "type": "file_exists", "path": "hello.txt" },
+        { "type": "status_clean" }
+      ],
+      "hints": ["git init", "echo 'hello' > hello.txt", "git add hello.txt", "git commit -m 'add hello'"],
+      "on_pass_note": "git init 创建 .git 目录。git add 把文件放入暂存区，git commit 把暂存区的快照保存为一次提交。"
+    }]
+  },
+  "L1.2": {
+    "name": "多次提交",
+    "tasks": [{
+      "id": "L1.2-a",
+      "difficulty": 1,
+      "description": "仓库已有一次提交。修改 app.txt 的内容，然后用包含 'update' 的提交信息提交修改。",
+      "setup": [
+        "git init",
+        "echo 'version 1' > app.txt",
+        "git add .",
+        "git commit -m 'initial'"
+      ],
+      "verify": [
+        { "type": "commit_count", "min": 2 },
+        { "type": "commit_message_contains", "pattern": "update" },
+        { "type": "status_clean" }
+      ],
+      "hints": ["echo 'version 2' > app.txt", "git add app.txt", "git commit -m 'update app'"],
+      "on_pass_note": "每次 commit 创建一个不可变的快照。git log 查看提交历史，git diff 查看当前修改。"
+    }]
+  },
+  "L1.3": {
+    "name": ".gitignore",
+    "tasks": [{
+      "id": "L1.3-a",
+      "difficulty": 1,
+      "description": "创建 .gitignore 文件让 Git 忽略所有 .log 文件，然后提交 .gitignore。完成后 debug.log 应该被忽略。",
+      "setup": [
+        "git init",
+        "echo 'code' > main.py",
+        "git add .",
+        "git commit -m 'init'"
+      ],
+      "verify": [
+        { "type": "file_exists", "path": ".gitignore" },
+        { "type": "gitignore_ignores", "path": "debug.log" },
+        { "type": "status_clean" }
+      ],
+      "hints": ["echo '*.log' > .gitignore", "git add .gitignore", "git commit -m 'add gitignore'"],
+      "on_pass_note": ".gitignore 使用 glob 模式。*.log 匹配所有 .log 结尾的文件。每行一个模式，# 开头是注释。"
+    }]
+  }
+}

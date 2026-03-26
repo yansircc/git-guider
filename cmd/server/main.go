@@ -9,33 +9,29 @@ import (
 	"path/filepath"
 
 	"git-guider/internal/server"
+	"git-guider/internal/tasks"
 	"git-guider/internal/training"
 )
 
 func main() {
 	port := flag.Int("port", 3000, "server port")
 	dev := flag.Bool("dev", false, "development mode (no embedded static, CORS enabled)")
-	taskDir := flag.String("tasks", "", "path to tasks directory or JSON file")
+	taskDir := flag.String("tasks", "", "path to tasks directory (overrides embedded)")
 	flag.Parse()
 
-	// Resolve task bank path
-	taskPath := *taskDir
-	if taskPath == "" {
-		exe, _ := os.Executable()
-		taskPath = filepath.Join(filepath.Dir(exe), "..", "..", "tasks")
-		if _, err := os.Stat(taskPath); err != nil {
-			taskPath = "tasks"
-		}
-	}
+	var bank *training.TaskBank
+	var err error
 
-	// Find task files
-	bank, err := training.LoadTaskBank(taskPath)
+	if *taskDir != "" {
+		bank, err = training.LoadTaskBank(*taskDir)
+	} else {
+		bank, err = training.LoadTaskBankFS(tasks.FS)
+	}
 	if err != nil {
 		log.Fatalf("load tasks: %v", err)
 	}
-	log.Printf("loaded %d topics from %s", len(bank.Topics), taskPath)
+	log.Printf("loaded %d topics", len(bank.Topics))
 
-	// Database
 	home, _ := os.UserHomeDir()
 	dbDir := filepath.Join(home, ".git-guider")
 	os.MkdirAll(dbDir, 0o755)
@@ -55,7 +51,7 @@ func main() {
 	if *dev {
 		handler = server.NewDevRouter(svc)
 		handler = corsMiddleware(handler)
-		log.Printf("dev mode: API on :%d, serve frontend via `npm run dev` on :5173", *port)
+		log.Printf("dev mode: API on :%d, serve frontend via `bun run dev` on :5173", *port)
 	} else {
 		handler = server.NewRouter(svc)
 		log.Printf("serving on http://localhost:%d", *port)
