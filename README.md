@@ -9,7 +9,7 @@ Web 闯关式 Git 训练游戏。在浏览器终端里输入真实 git 命令，
 ## 快速开始
 
 ```bash
-# 确保 Go 1.23+ / Node 18+ / git 已安装
+# 确保 Go 1.23+ / bun / git 已安装
 
 # 构建（前端 + 后端打包成单二进制）
 bash scripts/build.sh
@@ -26,7 +26,7 @@ bash scripts/build.sh
 go run ./cmd/server -dev
 
 # 终端 2: 启动前端（Vite dev server, 自动 proxy 到后端）
-cd web && npm run dev
+cd web && bun run dev
 # 浏览器打开 http://localhost:5173
 ```
 

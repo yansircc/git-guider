@@ -5,8 +5,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "==> Building frontend..."
 cd "$ROOT/web"
-npm install --silent
-npx vite build
+bun install
+bun run build
 
 echo "==> Building Go binary..."
 cd "$ROOT"
