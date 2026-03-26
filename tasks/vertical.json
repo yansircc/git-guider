@@ -32,7 +32,8 @@
         ],
         "verify": [
           { "type": "branch_current", "name": "main" },
-          { "type": "commit_count", "min": 3 },
+          { "type": "commit_count", "min": 2 },
+          { "type": "branch_exists", "name": "feature" },
           { "type": "merge_clean" }
         ],
         "hints": ["git branch feature", "git checkout feature", "做一次提交后 git checkout main && git merge feature"],
