@@ -3,4 +3,5 @@ out/
 *.db
 git-guider
 web/node_modules/
-internal/server/static/
+internal/server/static/*
+!internal/server/static/index.html
