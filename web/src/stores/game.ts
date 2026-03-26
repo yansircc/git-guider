@@ -60,6 +60,9 @@ export async function initSession() {
     const sess = await api.getSession()
     state = { ...state, sessionID: sess.id, loading: false }
 
+    // Session cookie is now set — terminal can connect WS
+    window.dispatchEvent(new CustomEvent('session-ready'))
+
     const levels = await api.getLevels()
     state = { ...state, levels }
 

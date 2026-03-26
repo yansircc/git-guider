@@ -173,12 +173,15 @@
     const ro = new ResizeObserver(() => fitAddon.fit())
     ro.observe(termEl)
 
-    connect()
-
-    // Listen for custom task-started events
+    // Connect WS only after session cookie is set
+    function onSessionReady() {
+      if (!ws) connect()
+    }
+    window.addEventListener('session-ready', onSessionReady)
     window.addEventListener('task-started', onTaskStarted)
 
     return () => {
+      window.removeEventListener('session-ready', onSessionReady)
       window.removeEventListener('task-started', onTaskStarted)
       ro.disconnect()
       ws?.close()
