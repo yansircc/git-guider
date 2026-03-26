@@ -109,6 +109,14 @@ func (s *Store) RecordAttempt(sessionID, topic, taskID string, difficulty int, p
 	return err
 }
 
+func (s *Store) ResetAll() error {
+	_, err := s.db.Exec(`
+		DELETE FROM attempts;
+		DELETE FROM topic_mastery;
+	`)
+	return err
+}
+
 func (s *Store) UpdateMastery(topic string, passed bool) error {
 	if passed {
 		_, err := s.db.Exec(`

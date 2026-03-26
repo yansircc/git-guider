@@ -148,3 +148,17 @@ export function clearResult() {
   state = { ...state, verifyResult: null, task: null }
   notify()
 }
+
+export async function resetProgress() {
+  state = { ...state, loading: true, message: '' }
+  notify()
+  try {
+    await api.reset()
+    state = { ...state, loading: false, task: null, verifyResult: null, message: '' }
+    window.dispatchEvent(new CustomEvent('task-started'))
+    notify()
+  } catch (e: any) {
+    state = { ...state, loading: false, message: e.message }
+    notify()
+  }
+}

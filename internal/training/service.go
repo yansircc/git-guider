@@ -172,6 +172,19 @@ func (s *Service) GetProgress() (*Progress, error) {
 	return s.store.GetProgress(s.taskBank)
 }
 
+func (s *Service) ResetProgress(sess *session.Session) error {
+	if err := s.store.ResetAll(); err != nil {
+		return err
+	}
+	if err := cleanSandbox(sess.SandboxRoot); err != nil {
+		return err
+	}
+	sess.CWD = sess.SandboxRoot
+	sess.TaskID = ""
+	sess.TaskJSON = ""
+	return s.store.SaveSession(sess)
+}
+
 func (s *Service) GetExecutor(sess *session.Session) *cmdexec.Executor {
 	return cmdexec.NewExecutor(sess.SandboxRoot, sess.CWD)
 }

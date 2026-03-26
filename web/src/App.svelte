@@ -3,7 +3,7 @@
   import Terminal from './lib/Terminal.svelte'
   import TaskPanel from './lib/TaskPanel.svelte'
   import LevelMap from './lib/LevelMap.svelte'
-  import { initSession } from './stores/game'
+  import { initSession, resetProgress } from './stores/game'
 
   onMount(() => {
     initSession()
@@ -17,6 +17,7 @@
       <span class="title">Git Guider</span>
     </div>
     <LevelMap />
+    <button class="reset-btn" onclick={() => { if (confirm('Reset all progress?')) resetProgress() }}>Reset</button>
   </header>
   <main class="content">
     <div class="terminal-pane">
@@ -84,5 +85,21 @@
     flex-shrink: 0;
     border-left: 1px solid #21262d;
     background: #161b22;
+  }
+
+  .reset-btn {
+    margin-left: auto;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid #30363d;
+    background: transparent;
+    color: #8b949e;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .reset-btn:hover {
+    color: #ff7b72;
+    border-color: #ff7b72;
   }
 </style>

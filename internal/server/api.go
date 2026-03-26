@@ -107,6 +107,19 @@ func (a *API) HandleLevels(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, a.svc.GetLevels())
 }
 
+func (a *API) HandleReset(w http.ResponseWriter, r *http.Request) {
+	sess, err := a.sessionFromCookie(r)
+	if err != nil {
+		writeJSONError(w, 400, "no session")
+		return
+	}
+	if err := a.svc.ResetProgress(sess); err != nil {
+		writeJSONError(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, a.svc.SessionToResponse(sess))
+}
+
 func (a *API) sessionFromCookie(r *http.Request) (*training.SessionInfo, error) {
 	c, err := r.Cookie("session_id")
 	if err != nil {
