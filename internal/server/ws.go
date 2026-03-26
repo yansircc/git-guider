@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
@@ -40,7 +39,6 @@ func HandleWS(svc *training.Service) http.Handler {
 		exec := cmdexec.NewExecutor(sess.SandboxRoot, sess.CWD)
 		var mu sync.Mutex
 
-		// Send initial prompt
 		sendWS(conn, "prompt", buildPrompt(exec))
 
 		for {
@@ -49,15 +47,33 @@ func HandleWS(svc *training.Service) http.Handler {
 				return
 			}
 
-			if msg.Type != "cmd" || strings.TrimSpace(msg.Data) == "" {
+			mu.Lock()
+
+			// Before every command (or sync), reload session from DB.
+			// This picks up CWD changes from task start (setup runs in API).
+			fresh, freshErr := svc.GetSession(sessionID)
+			if freshErr == nil && fresh.CWD != exec.CWD {
+				exec.CWD = fresh.CWD
+				// SandboxRoot may also change on task recreate
+				exec.SandboxRoot = fresh.SandboxRoot
+				exec.Env = cmdexec.BaselineEnv(fresh.SandboxRoot)
+				cmdexec.EnsureGitConfig(fresh.SandboxRoot)
+			}
+
+			if msg.Type == "sync" {
+				// Frontend requests a prompt refresh (e.g. after task start)
+				mu.Unlock()
+				sendWS(conn, "prompt", buildPrompt(exec))
 				continue
 			}
 
-			mu.Lock()
+			if msg.Type != "cmd" || strings.TrimSpace(msg.Data) == "" {
+				mu.Unlock()
+				continue
+			}
+
 			result, execErr := exec.Run(msg.Data)
 			if result != nil {
-				// Update session CWD
-				sess.CWD = result.CWD
 				exec.CWD = result.CWD
 				svc.UpdateSessionCWD(sessionID, result.CWD)
 			}
@@ -123,9 +139,4 @@ func sendWS(conn *websocket.Conn, msgType, data string) {
 	if err := websocket.JSON.Send(conn, msg); err != nil {
 		log.Printf("ws send error: %v", err)
 	}
-}
-
-// For debug logging
-func init() {
-	_ = json.Marshal
 }

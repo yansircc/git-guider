@@ -58,16 +58,16 @@ export async function initSession() {
   notify()
   try {
     const sess = await api.getSession()
-    state = { ...state, sessionID: sess.ID, loading: false }
+    state = { ...state, sessionID: sess.id, loading: false }
 
     const levels = await api.getLevels()
     state = { ...state, levels }
 
     // If session has an active task, restore it
-    if (sess.TaskID) {
+    if (sess.task_id) {
       const task = levels
         .flatMap((l: Level) => l.tasks)
-        .find((t: Task) => t.id === sess.TaskID)
+        .find((t: Task) => t.id === sess.task_id)
       if (task) {
         state = { ...state, task }
       }
@@ -88,6 +88,8 @@ export async function startNextTask() {
       state = { ...state, loading: false, message: res.error }
     } else {
       state = { ...state, task: res.task, loading: false }
+      // Notify terminal to sync CWD/prompt after setup changed session
+      window.dispatchEvent(new CustomEvent('task-started'))
     }
     notify()
   } catch (e: any) {

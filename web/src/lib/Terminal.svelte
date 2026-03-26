@@ -50,6 +50,17 @@
     }
   }
 
+  function syncPrompt() {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'sync', data: '' }))
+    }
+  }
+
+  // Listen for task-started events to sync terminal CWD
+  function onTaskStarted() {
+    syncPrompt()
+  }
+
   onMount(() => {
     term = new Terminal({
       fontFamily: '"Cascadia Code", "Fira Code", "JetBrains Mono", Menlo, monospace',
@@ -159,7 +170,11 @@
 
     connect()
 
+    // Listen for custom task-started events
+    window.addEventListener('task-started', onTaskStarted)
+
     return () => {
+      window.removeEventListener('task-started', onTaskStarted)
       ro.disconnect()
       ws?.close()
       term.dispose()

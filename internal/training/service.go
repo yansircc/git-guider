@@ -3,6 +3,8 @@ package training
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 
 	"git-guider/internal/cmdexec"
@@ -59,7 +61,10 @@ func (s *Service) StartTask(sess *session.Session, taskID string) error {
 		return err
 	}
 
-	// Use sandbox root directly as working directory
+	// Clean the sandbox: remove all contents and recreate the directory
+	if err := cleanSandbox(sess.SandboxRoot); err != nil {
+		return fmt.Errorf("clean sandbox: %w", err)
+	}
 	sess.CWD = sess.SandboxRoot
 
 	// Run setup commands through the unified executor
@@ -69,7 +74,6 @@ func (s *Service) StartTask(sess *session.Session, taskID string) error {
 		if err != nil {
 			return fmt.Errorf("setup command %q: %w", cmd, err)
 		}
-		// cd changes the executor's CWD
 		sess.CWD = result.CWD
 		exec.CWD = result.CWD
 	}
@@ -78,6 +82,20 @@ func (s *Service) StartTask(sess *session.Session, taskID string) error {
 	sess.TaskJSON = taskToJSON(task)
 	sess.IssuedAt = time.Now()
 	return s.store.SaveSession(sess)
+}
+
+func cleanSandbox(root string) error {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if e.Name() == ".gitconfig" {
+			continue // keep the controlled gitconfig
+		}
+		os.RemoveAll(filepath.Join(root, e.Name()))
+	}
+	return nil
 }
 
 func (s *Service) VerifyTask(sess *session.Session) (*VerifyResult, error) {
@@ -144,7 +162,23 @@ func (s *Service) GetExecutor(sess *session.Session) *cmdexec.Executor {
 	return cmdexec.NewExecutor(sess.SandboxRoot, sess.CWD)
 }
 
-// SessionInfo is the JSON-friendly view of a session for the API.
+// SessionResponse is the JSON-friendly view of a session for the API.
+// Hides internal fields (SandboxRoot, TaskJSON).
+type SessionResponse struct {
+	ID     string `json:"id"`
+	TaskID string `json:"task_id"`
+	CWD    string `json:"cwd"` // display-only relative path
+}
+
+func (s *Service) SessionToResponse(sess *session.Session) SessionResponse {
+	return SessionResponse{
+		ID:     sess.ID,
+		TaskID: sess.TaskID,
+		CWD:    sess.RelativeCWD(),
+	}
+}
+
+// SessionInfo keeps the full internal session for server-side use.
 type SessionInfo = session.Session
 
 func (s *Service) UpdateSessionCWD(sessionID, cwd string) {

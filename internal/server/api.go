@@ -16,26 +16,23 @@ func NewAPI(svc *training.Service) *API {
 }
 
 func (a *API) HandleSession(w http.ResponseWriter, r *http.Request) {
-	// GET: get or create session (stored in cookie)
 	sessionID := ""
 	if c, err := r.Cookie("session_id"); err == nil {
 		sessionID = c.Value
 	}
 
-	var sess interface{}
-	var err error
-
+	var sess *training.SessionInfo
 	if sessionID != "" {
-		sess, err = a.svc.GetSession(sessionID)
-		if err != nil {
-			sess = nil
+		s, err := a.svc.GetSession(sessionID)
+		if err == nil {
+			sess = s
 		}
 	}
 
 	if sess == nil {
 		s, err := a.svc.CreateSession()
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			writeJSONError(w, 500, err.Error())
 			return
 		}
 		http.SetCookie(w, &http.Cookie{
@@ -46,24 +43,29 @@ func (a *API) HandleSession(w http.ResponseWriter, r *http.Request) {
 		sess = s
 	}
 
-	writeJSON(w, sess)
+	writeJSON(w, a.svc.SessionToResponse(sess))
 }
 
 func (a *API) HandleTaskNext(w http.ResponseWriter, r *http.Request) {
 	sess, err := a.sessionFromCookie(r)
 	if err != nil {
-		http.Error(w, "no session", 400)
+		writeJSONError(w, 400, "no session")
+		return
+	}
+
+	if sess.TaskID != "" {
+		writeJSONError(w, 409, "task already active: "+sess.TaskID)
 		return
 	}
 
 	task, err := a.svc.SelectNextTask(sess.ID)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSONError(w, 200, err.Error())
 		return
 	}
 
 	if err := a.svc.StartTask(sess, task.ID); err != nil {
-		http.Error(w, err.Error(), 500)
+		writeJSONError(w, 500, err.Error())
 		return
 	}
 
@@ -71,20 +73,20 @@ func (a *API) HandleTaskNext(w http.ResponseWriter, r *http.Request) {
 	sess, _ = a.svc.GetSession(sess.ID)
 	writeJSON(w, map[string]any{
 		"task":    task,
-		"session": sess,
+		"session": a.svc.SessionToResponse(sess),
 	})
 }
 
 func (a *API) HandleTaskVerify(w http.ResponseWriter, r *http.Request) {
 	sess, err := a.sessionFromCookie(r)
 	if err != nil {
-		http.Error(w, "no session", 400)
+		writeJSONError(w, 400, "no session")
 		return
 	}
 
 	result, err := a.svc.VerifyTask(sess)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		writeJSONError(w, 400, err.Error())
 		return
 	}
 
@@ -94,7 +96,7 @@ func (a *API) HandleTaskVerify(w http.ResponseWriter, r *http.Request) {
 func (a *API) HandleProgress(w http.ResponseWriter, r *http.Request) {
 	progress, err := a.svc.GetProgress()
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		writeJSONError(w, 500, err.Error())
 		return
 	}
 	writeJSON(w, progress)
@@ -119,4 +121,10 @@ func (a *API) sessionFromCookie(r *http.Request) (*training.SessionInfo, error) 
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(v)
+}
+
+func writeJSONError(w http.ResponseWriter, status int, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }
