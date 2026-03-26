@@ -8,13 +8,25 @@ Web 闯关式 Git 训练游戏。在浏览器终端里输入真实 git 命令，
 
 ## 快速开始
 
+**下载预编译二进制**（推荐，不需要安装 Go/Bun）：
+
 ```bash
-# 确保 Go 1.23+ / bun / git 已安装
+# macOS Apple Silicon
+curl -L https://github.com/yansircc/git-guider/releases/latest/download/git-guider-darwin-arm64.tar.gz | tar xz
+./git-guider
+# 浏览器打开 http://localhost:3000
 
-# 构建（前端 + 后端打包成单二进制）
+# macOS Intel
+curl -L https://github.com/yansircc/git-guider/releases/latest/download/git-guider-darwin-amd64.tar.gz | tar xz
+
+# Linux x86_64
+curl -L https://github.com/yansircc/git-guider/releases/latest/download/git-guider-linux-amd64.tar.gz | tar xz
+```
+
+**从源码构建**（需要 Go 1.23+ 和 Bun）：
+
+```bash
 bash scripts/build.sh
-
-# 启动
 ./git-guider
 # 浏览器打开 http://localhost:3000
 ```
