@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte'
+  import { onMount } from 'svelte'
   import { Terminal } from '@xterm/xterm'
   import { FitAddon } from '@xterm/addon-fit'
   import '@xterm/xterm/css/xterm.css'
@@ -9,6 +9,7 @@
   let fitAddon: FitAddon
   let ws: WebSocket | null = null
   let inputBuffer = ''
+  let cursorPos = 0
   let history: string[] = []
   let historyIdx = -1
   let currentPrompt = '$ '
@@ -32,9 +33,12 @@
           term.write(`\x1b[32m${currentPrompt}\x1b[0m`)
           break
         case 'prompt-replace':
-          // Full line redraw: erase current line, rewrite new prompt + preserved input
           currentPrompt = msg.data
           term.write(`\r\x1b[2K\x1b[32m${currentPrompt}\x1b[0m${inputBuffer}`)
+          // Move cursor back if not at end
+          if (cursorPos < inputBuffer.length) {
+            term.write(`\x1b[${inputBuffer.length - cursorPos}D`)
+          }
           break
       }
     }
@@ -61,9 +65,20 @@
     }
   }
 
-  // Listen for task-started events to sync terminal CWD
   function onTaskStarted() {
+    // Clear terminal and reset input for new task
+    term.clear()
+    inputBuffer = ''
+    cursorPos = 0
     syncPrompt()
+  }
+
+  // Redraw the entire input line (prompt + buffer + position cursor)
+  function redrawLine() {
+    term.write(`\r\x1b[2K\x1b[32m${currentPrompt}\x1b[0m${inputBuffer}`)
+    if (cursorPos < inputBuffer.length) {
+      term.write(`\x1b[${inputBuffer.length - cursorPos}D`)
+    }
   }
 
   onMount(() => {
@@ -113,6 +128,7 @@
         term.write('\r\n')
         const cmd = inputBuffer.trim()
         inputBuffer = ''
+        cursorPos = 0
         if (cmd) {
           history.push(cmd)
           historyIdx = history.length
@@ -121,59 +137,99 @@
           term.write(`\x1b[32m${currentPrompt}\x1b[0m`)
         }
       } else if (code === 8) { // Backspace
-        if (inputBuffer.length > 0) {
-          inputBuffer = inputBuffer.slice(0, -1)
-          term.write('\b \b')
+        if (cursorPos > 0) {
+          inputBuffer = inputBuffer.slice(0, cursorPos - 1) + inputBuffer.slice(cursorPos)
+          cursorPos--
+          redrawLine()
+        }
+      } else if (code === 46) { // Delete
+        if (cursorPos < inputBuffer.length) {
+          inputBuffer = inputBuffer.slice(0, cursorPos) + inputBuffer.slice(cursorPos + 1)
+          redrawLine()
+        }
+      } else if (code === 37) { // Left arrow
+        if (cursorPos > 0) {
+          cursorPos--
+          term.write('\x1b[D')
+        }
+      } else if (code === 39) { // Right arrow
+        if (cursorPos < inputBuffer.length) {
+          cursorPos++
+          term.write('\x1b[C')
+        }
+      } else if (code === 36) { // Home
+        if (cursorPos > 0) {
+          term.write(`\x1b[${cursorPos}D`)
+          cursorPos = 0
+        }
+      } else if (code === 35) { // End
+        if (cursorPos < inputBuffer.length) {
+          term.write(`\x1b[${inputBuffer.length - cursorPos}C`)
+          cursorPos = inputBuffer.length
         }
       } else if (code === 38) { // Up arrow
         if (historyIdx > 0) {
-          // Clear current input
-          while (inputBuffer.length > 0) {
-            term.write('\b \b')
-            inputBuffer = inputBuffer.slice(0, -1)
-          }
           historyIdx--
           inputBuffer = history[historyIdx]
-          term.write(inputBuffer)
+          cursorPos = inputBuffer.length
+          redrawLine()
         }
       } else if (code === 40) { // Down arrow
-        while (inputBuffer.length > 0) {
-          term.write('\b \b')
-          inputBuffer = inputBuffer.slice(0, -1)
-        }
         if (historyIdx < history.length - 1) {
           historyIdx++
           inputBuffer = history[historyIdx]
-          term.write(inputBuffer)
         } else {
           historyIdx = history.length
+          inputBuffer = ''
         }
+        cursorPos = inputBuffer.length
+        redrawLine()
       } else if (code === 76 && domEvent.ctrlKey) { // Ctrl+L
         term.clear()
+        inputBuffer = ''
+        cursorPos = 0
         term.write(`\x1b[32m${currentPrompt}\x1b[0m`)
-        term.write(inputBuffer)
+      } else if (code === 65 && domEvent.ctrlKey) { // Ctrl+A → Home
+        if (cursorPos > 0) {
+          term.write(`\x1b[${cursorPos}D`)
+          cursorPos = 0
+        }
+      } else if (code === 69 && domEvent.ctrlKey) { // Ctrl+E → End
+        if (cursorPos < inputBuffer.length) {
+          term.write(`\x1b[${inputBuffer.length - cursorPos}C`)
+          cursorPos = inputBuffer.length
+        }
+      } else if (code === 85 && domEvent.ctrlKey) { // Ctrl+U → clear line
+        inputBuffer = ''
+        cursorPos = 0
+        redrawLine()
       } else if (domEvent.ctrlKey || domEvent.metaKey) {
         // ignore other ctrl/meta
       } else if (key.length === 1) {
-        inputBuffer += key
-        term.write(key)
+        inputBuffer = inputBuffer.slice(0, cursorPos) + key + inputBuffer.slice(cursorPos)
+        cursorPos++
+        if (cursorPos === inputBuffer.length) {
+          // Appending at end — just write the char
+          term.write(key)
+        } else {
+          // Inserting in middle — redraw from cursor
+          redrawLine()
+        }
       }
     })
 
     // Handle paste
     term.onData((data) => {
-      // onData fires for paste events with the full string
-      // But onKey also fires for single chars, so only handle multi-char pastes
       if (data.length > 1 && !data.startsWith('\x1b')) {
-        inputBuffer += data
-        term.write(data)
+        inputBuffer = inputBuffer.slice(0, cursorPos) + data + inputBuffer.slice(cursorPos)
+        cursorPos += data.length
+        redrawLine()
       }
     })
 
     const ro = new ResizeObserver(() => fitAddon.fit())
     ro.observe(termEl)
 
-    // Connect WS only after session cookie is set
     function onSessionReady() {
       if (!ws) connect()
     }
