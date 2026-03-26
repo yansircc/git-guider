@@ -1,3 +1,6 @@
 out/
 .DS_Store
 *.db
+git-guider
+web/node_modules/
+internal/server/static/

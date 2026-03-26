@@ -143,3 +143,34 @@ func (s *Service) GetProgress() (*Progress, error) {
 func (s *Service) GetExecutor(sess *session.Session) *cmdexec.Executor {
 	return cmdexec.NewExecutor(sess.SandboxRoot, sess.CWD)
 }
+
+// SessionInfo is the JSON-friendly view of a session for the API.
+type SessionInfo = session.Session
+
+func (s *Service) UpdateSessionCWD(sessionID, cwd string) {
+	sess, err := s.store.LoadSession(sessionID)
+	if err != nil {
+		return
+	}
+	sess.CWD = cwd
+	s.store.SaveSession(sess)
+}
+
+type LevelInfo struct {
+	Key    string `json:"key"`
+	Name   string `json:"name"`
+	Tasks  []Task `json:"tasks"`
+}
+
+func (s *Service) GetLevels() []LevelInfo {
+	var levels []LevelInfo
+	for _, key := range s.taskBank.SortedTopicKeys() {
+		entry := s.taskBank.Topics[key]
+		levels = append(levels, LevelInfo{
+			Key:   key,
+			Name:  entry.Name,
+			Tasks: entry.Tasks,
+		})
+	}
+	return levels
+}

@@ -4,16 +4,37 @@ Web 闯关式 Git 训练游戏。在浏览器终端里输入真实 git 命令，
 
 ## 当前状态
 
-核心领域层已实现（Step 0），transport/UI 尚未开始。可以通过测试验证全部功能。
+核心领域层 + Web 前端已实现。浏览器打开即可闯关。
 
 ## 快速开始
 
 ```bash
-# 确保 Go 1.23+ 和 git 已安装
-go test ./internal/... -v
+# 确保 Go 1.23+ / Node 18+ / git 已安装
+
+# 构建（前端 + 后端打包成单二进制）
+bash scripts/build.sh
+
+# 启动
+./git-guider
+# 浏览器打开 http://localhost:3000
 ```
 
-测试会自动创建临时 sandbox，在其中执行真实 git 命令并验证结果。不需要额外依赖。
+### 开发模式
+
+```bash
+# 终端 1: 启动后端（API only, 开启 CORS）
+go run ./cmd/server -dev
+
+# 终端 2: 启动前端（Vite dev server, 自动 proxy 到后端）
+cd web && npm run dev
+# 浏览器打开 http://localhost:5173
+```
+
+### 只跑测试
+
+```bash
+go test ./internal/... -v
+```
 
 ## 架构
 
@@ -137,7 +158,5 @@ git-guider/
 
 ## 下一步
 
-- [ ] Step 2: WebSocket + REST API (`internal/server/`)
-- [ ] Step 3: Svelte 前端 (xterm.js + TaskPanel + LevelMap)
 - [ ] Step 4: 题库扩充 (L1-L5 共 ~70 题)
-- [ ] Step 5: 构建脚本 + CI
+- [ ] Step 5: CI + release 构建

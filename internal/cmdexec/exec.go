@@ -150,3 +150,17 @@ func (e *Executor) execCommand(cmd *ParsedCommand) (*ExecResult, error) {
 
 	return result, nil
 }
+
+// RunInternal executes a command directly without algebra validation.
+// Used for internal operations like getting branch name for prompt.
+func (e *Executor) RunInternal(prog string, args ...string) (string, error) {
+	path, err := exec.LookPath(prog)
+	if err != nil {
+		return "", err
+	}
+	c := exec.Command(path, args...)
+	c.Dir = e.CWD
+	c.Env = e.Env
+	out, err := c.Output()
+	return strings.TrimSpace(string(out)), err
+}
