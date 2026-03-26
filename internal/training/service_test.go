@@ -36,19 +36,14 @@ func setupService(t *testing.T) (*Service, func()) {
 
 func findVerticalJSON(t *testing.T) string {
 	t.Helper()
-	// Walk up from test file to find tasks/vertical.json
 	dir, _ := os.Getwd()
-	for {
-		candidate := filepath.Join(dir, "tasks", "vertical.json")
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatal("cannot find tasks/vertical.json")
-		}
-		dir = parent
+	// testdata is in the same package directory
+	candidate := filepath.Join(dir, "testdata", "vertical.json")
+	if _, err := os.Stat(candidate); err == nil {
+		return candidate
 	}
+	t.Fatalf("cannot find testdata/vertical.json from %s", dir)
+	return ""
 }
 
 // TestVerticalSliceA: init + add + commit (L1)

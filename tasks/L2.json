@@ -1,0 +1,65 @@
+{
+  "L2.1": {
+    "name": "修改提交 (amend)",
+    "tasks": [{
+      "id": "L2.1-a",
+      "difficulty": 1,
+      "description": "你刚做了一次提交，但忘了把 readme.txt 加进去。创建 readme.txt，然后用 git commit --amend 把它补进上一次提交。",
+      "setup": [
+        "git init",
+        "echo 'hello' > hello.txt",
+        "git add .",
+        "git commit -m 'initial commit'"
+      ],
+      "verify": [
+        { "type": "file_exists", "path": "readme.txt" },
+        { "type": "commit_count", "min": 1 },
+        { "type": "status_clean" }
+      ],
+      "hints": ["echo 'readme' > readme.txt", "git add readme.txt", "git commit --amend --no-edit"],
+      "on_pass_note": "--amend 替换最近一次提交（改变哈希值）。--no-edit 保留原提交信息。已推送的提交不要 amend。"
+    }]
+  },
+  "L2.2": {
+    "name": "恢复文件 (restore)",
+    "tasks": [{
+      "id": "L2.2-a",
+      "difficulty": 1,
+      "description": "config.txt 被意外改成了 'BROKEN'。用 git restore 把它恢复到上次提交时的状态（'correct setting'）。",
+      "setup": [
+        "git init",
+        "echo 'correct setting' > config.txt",
+        "git add .",
+        "git commit -m 'add config'",
+        "echo 'BROKEN' > config.txt"
+      ],
+      "verify": [
+        { "type": "file_contains", "path": "config.txt", "pattern": "correct setting" },
+        { "type": "status_clean" }
+      ],
+      "hints": ["git status 查看哪些文件被修改", "git restore config.txt"],
+      "on_pass_note": "git restore <file> 从 HEAD 恢复文件，丢弃工作区修改。这个操作不可逆。git restore --staged <file> 可以取消暂存。"
+    }]
+  },
+  "L2.3": {
+    "name": "重命名文件 (mv)",
+    "tasks": [{
+      "id": "L2.3-a",
+      "difficulty": 1,
+      "description": "用 git mv 把 old_name.txt 重命名为 new_name.txt，然后提交。",
+      "setup": [
+        "git init",
+        "echo 'content' > old_name.txt",
+        "git add .",
+        "git commit -m 'add file'"
+      ],
+      "verify": [
+        { "type": "file_exists", "path": "new_name.txt" },
+        { "type": "file_not_exists", "path": "old_name.txt" },
+        { "type": "status_clean" }
+      ],
+      "hints": ["git mv old_name.txt new_name.txt", "git commit -m 'rename file'"],
+      "on_pass_note": "git mv = mv + git rm + git add。Git 通过内容相似度检测来识别重命名，所以 git log --follow 能追踪重命名后的文件历史。"
+    }]
+  }
+}

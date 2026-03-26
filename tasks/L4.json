@@ -1,0 +1,80 @@
+{
+  "L4.1": {
+    "name": "Clone 和 Push",
+    "tasks": [{
+      "id": "L4.1-a",
+      "difficulty": 2,
+      "description": "sandbox 已有一个 bare repo（origin.git）和它的 clone（workspace）。在 workspace 中新增文件，提交并 push 到 origin。",
+      "setup": [
+        "git init --bare origin.git",
+        "git clone origin.git workspace",
+        "cd workspace",
+        "echo 'hello' > README.md",
+        "git add .",
+        "git commit -m 'init'",
+        "git push -u origin main"
+      ],
+      "verify": [
+        { "type": "commit_count", "min": 2 },
+        { "type": "remote_exists", "name": "origin" },
+        { "type": "commit_count", "min": 2, "repo": "origin.git" }
+      ],
+      "hints": ["echo 'new' > new.txt", "git add .", "git commit -m 'add file'", "git push"],
+      "on_pass_note": "git push 将本地提交同步到远程分支。bare repo 没有工作区，只存 Git 数据，通常作为共享中心仓库。"
+    }]
+  },
+  "L4.2": {
+    "name": "拉取远程更新",
+    "tasks": [{
+      "id": "L4.2-a",
+      "difficulty": 2,
+      "description": "别人往 origin 推了新提交。用 git pull 拉取到本地。拉取后 remote.txt 应该出现在你的工作区。",
+      "setup": [
+        "git init --bare origin.git",
+        "git clone origin.git workspace",
+        "cd workspace",
+        "echo 'init' > file.txt",
+        "git add .",
+        "git commit -m 'init'",
+        "git push -u origin main",
+        "cd ..",
+        "git clone origin.git other",
+        "cd other",
+        "echo 'from remote' > remote.txt",
+        "git add .",
+        "git commit -m 'remote work'",
+        "git push",
+        "cd ../workspace"
+      ],
+      "verify": [
+        { "type": "file_exists", "path": "remote.txt" },
+        { "type": "commit_count", "min": 2 }
+      ],
+      "hints": ["git fetch origin 查看远程有没有新提交", "git pull"],
+      "on_pass_note": "git pull = git fetch + git merge。fetch 只下载数据不改本地分支，pull 还会自动合并。实际开发中常用 git pull --rebase 保持线性历史。"
+    }]
+  },
+  "L4.3": {
+    "name": "推送新分支",
+    "tasks": [{
+      "id": "L4.3-a",
+      "difficulty": 2,
+      "description": "在本地创建 feature 分支，做一次提交，然后把这个新分支推送到 origin。",
+      "setup": [
+        "git init --bare origin.git",
+        "git clone origin.git workspace",
+        "cd workspace",
+        "echo 'init' > file.txt",
+        "git add .",
+        "git commit -m 'init'",
+        "git push -u origin main"
+      ],
+      "verify": [
+        { "type": "branch_exists", "name": "feature" },
+        { "type": "commit_count", "min": 2 }
+      ],
+      "hints": ["git checkout -b feature", "echo 'feature' > feature.txt", "git add . && git commit -m 'feature'", "git push -u origin feature"],
+      "on_pass_note": "git push -u origin feature 推送本地分支并设置上游追踪。之后在该分支上 git push/pull 不需要再指定远程和分支名。"
+    }]
+  }
+}

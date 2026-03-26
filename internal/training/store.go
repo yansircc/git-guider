@@ -124,8 +124,8 @@ func (s *Store) UpdateMastery(topic string, passed bool) error {
 			VALUES (?, 1, 0, datetime('now'))
 			ON CONFLICT(topic) DO UPDATE SET
 				consecutive_passes = consecutive_passes + 1,
-				mastered = CASE WHEN consecutive_passes + 1 >= 2 THEN 1 ELSE mastered END,
-				mastered_at = CASE WHEN consecutive_passes + 1 >= 2 THEN datetime('now') ELSE mastered_at END,
+				mastered = CASE WHEN consecutive_passes + 1 >= 1 THEN 1 ELSE mastered END,
+				mastered_at = CASE WHEN consecutive_passes + 1 >= 1 THEN datetime('now') ELSE mastered_at END,
 				updated_at = datetime('now')
 		`, topic)
 		return err

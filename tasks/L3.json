@@ -1,0 +1,82 @@
+{
+  "L3.1": {
+    "name": "创建分支并合并",
+    "tasks": [{
+      "id": "L3.1-a",
+      "difficulty": 1,
+      "description": "创建 feature 分支，在上面做一次提交，然后切回 main 合并 feature。",
+      "setup": [
+        "git init",
+        "echo 'main' > file.txt",
+        "git add .",
+        "git commit -m 'init'"
+      ],
+      "verify": [
+        { "type": "branch_current", "name": "main" },
+        { "type": "commit_count", "min": 2 },
+        { "type": "branch_exists", "name": "feature" },
+        { "type": "merge_clean" }
+      ],
+      "hints": ["git checkout -b feature", "创建文件并提交", "git checkout main", "git merge feature"],
+      "on_pass_note": "当 feature 领先于 main 且没有分叉时，merge 做 fast-forward：直接把 main 移到 feature 的位置，不产生新提交。"
+    }]
+  },
+  "L3.2": {
+    "name": "解决合并冲突",
+    "tasks": [{
+      "id": "L3.2-a",
+      "difficulty": 2,
+      "description": "main 和 feature 都修改了 file.txt，合并会冲突。执行 git merge feature，手动解决冲突，然后完成合并提交。",
+      "setup": [
+        "git init",
+        "echo 'original' > file.txt",
+        "git add .",
+        "git commit -m 'init'",
+        "git branch feature",
+        "echo 'main version' > file.txt",
+        "git add .",
+        "git commit -m 'main edit'",
+        "git checkout feature",
+        "echo 'feature version' > file.txt",
+        "git add .",
+        "git commit -m 'feature edit'",
+        "git checkout main"
+      ],
+      "verify": [
+        { "type": "branch_current", "name": "main" },
+        { "type": "merge_clean" },
+        { "type": "commit_count", "min": 4 },
+        { "type": "status_clean" }
+      ],
+      "hints": [
+        "git merge feature（会提示冲突）",
+        "echo '你想保留的内容' > file.txt",
+        "git add file.txt",
+        "git commit -m 'resolve conflict'"
+      ],
+      "on_pass_note": "冲突时 Git 在文件中插入 <<<<<<< ======= >>>>>>> 标记。解决方法：编辑文件内容 → git add → git commit 完成合并。"
+    }]
+  },
+  "L3.3": {
+    "name": "非快进合并 (--no-ff)",
+    "tasks": [{
+      "id": "L3.3-a",
+      "difficulty": 2,
+      "description": "创建 feature 分支并提交，然后用 --no-ff 合并回 main，强制生成一个合并提交（即使可以 fast-forward）。",
+      "setup": [
+        "git init",
+        "echo 'base' > file.txt",
+        "git add .",
+        "git commit -m 'init'"
+      ],
+      "verify": [
+        { "type": "branch_current", "name": "main" },
+        { "type": "head_parents", "count": 2 },
+        { "type": "merge_clean" },
+        { "type": "status_clean" }
+      ],
+      "hints": ["git checkout -b feature", "做一次提交", "git checkout main", "git merge --no-ff feature -m 'merge feature'"],
+      "on_pass_note": "--no-ff 保证合并始终产生一个有两个父节点的 merge commit，让分支历史在 git log --graph 中清晰可见。"
+    }]
+  }
+}

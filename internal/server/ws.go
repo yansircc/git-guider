@@ -81,6 +81,11 @@ func HandleWS(svc *training.Service) http.Handler {
 			mu.Unlock()
 
 			if execErr != nil {
+				// Send stdout even on error — git merge conflict info, git commit
+				// "nothing to commit", etc. are in stdout, not stderr.
+				if result != nil && result.Stdout != "" {
+					sendWS(conn, "output", result.Stdout)
+				}
 				if result != nil && result.Stderr != "" {
 					sendWS(conn, "output", result.Stderr)
 				} else {
