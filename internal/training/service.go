@@ -172,6 +172,10 @@ func (s *Service) GetProgress() (*Progress, error) {
 	return s.store.GetProgress(s.taskBank)
 }
 
+func (s *Service) GetTask(taskID string) (*Task, string, error) {
+	return s.taskBank.GetTask(taskID)
+}
+
 func (s *Service) ResetProgress(sess *session.Session) error {
 	if err := s.store.ResetAll(); err != nil {
 		return err

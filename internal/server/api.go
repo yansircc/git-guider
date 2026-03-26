@@ -120,6 +120,29 @@ func (a *API) HandleReset(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, a.svc.SessionToResponse(sess))
 }
 
+func (a *API) HandleTaskRetry(w http.ResponseWriter, r *http.Request) {
+	sess, err := a.sessionFromCookie(r)
+	if err != nil {
+		writeJSONError(w, 400, "no session")
+		return
+	}
+	if sess.TaskID == "" {
+		writeJSONError(w, 400, "no active task")
+		return
+	}
+	taskID := sess.TaskID
+	if err := a.svc.StartTask(sess, taskID); err != nil {
+		writeJSONError(w, 500, err.Error())
+		return
+	}
+	task, _, _ := a.svc.GetTask(taskID)
+	sess, _ = a.svc.GetSession(sess.ID)
+	writeJSON(w, map[string]any{
+		"task":    task,
+		"session": a.svc.SessionToResponse(sess),
+	})
+}
+
 func (a *API) sessionFromCookie(r *http.Request) (*training.SessionInfo, error) {
 	c, err := r.Cookie("session_id")
 	if err != nil {

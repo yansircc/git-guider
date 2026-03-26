@@ -103,6 +103,20 @@ export async function startNextTask() {
   }
 }
 
+export async function retryTask() {
+  state = { ...state, loading: true, verifyResult: null, message: '' }
+  notify()
+  try {
+    const res = await api.retryTask()
+    state = { ...state, task: res.task, loading: false }
+    window.dispatchEvent(new CustomEvent('task-started'))
+    notify()
+  } catch (e: any) {
+    state = { ...state, loading: false, message: e.message }
+    notify()
+  }
+}
+
 export async function verifyTask() {
   state = { ...state, loading: true, message: '' }
   notify()

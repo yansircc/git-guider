@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { subscribe, verifyTask, startNextTask, clearResult, getState } from '../stores/game'
+  import { subscribe, verifyTask, retryTask, startNextTask, clearResult, getState } from '../stores/game'
 
   let state = $state(getState())
   const unsub = subscribe(s => { state = s })
@@ -57,6 +57,9 @@
       {:else}
         <button class="btn btn-primary" onclick={handleVerify} disabled={state.loading}>
           {state.loading ? 'Checking...' : 'Check'}
+        </button>
+        <button class="btn btn-secondary" onclick={() => retryTask()} disabled={state.loading}>
+          Retry
         </button>
       {/if}
     </div>
@@ -182,6 +185,14 @@
   }
   .btn-primary:hover:not(:disabled) {
     background: #2ea043;
+  }
+  .btn-secondary {
+    background: #21262d;
+    color: #c9d1d9;
+    border-color: #30363d;
+  }
+  .btn-secondary:hover:not(:disabled) {
+    background: #30363d;
   }
 
   .btn-link {

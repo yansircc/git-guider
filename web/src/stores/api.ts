@@ -30,6 +30,7 @@ export const api = {
   getSession: () => request('GET', '/api/session'),
   nextTask: () => request('POST', '/api/task/next'),
   verifyTask: () => request('POST', '/api/task/verify'),
+  retryTask: () => request('POST', '/api/task/retry'),
   getProgress: () => request('GET', '/api/progress'),
   getLevels: () => request('GET', '/api/levels'),
   reset: () => request('POST', '/api/reset'),

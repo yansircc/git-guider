@@ -22,6 +22,7 @@ func NewRouter(svc *training.Service) http.Handler {
 	mux.HandleFunc("GET /api/progress", api.HandleProgress)
 	mux.HandleFunc("GET /api/levels", api.HandleLevels)
 	mux.HandleFunc("POST /api/reset", api.HandleReset)
+	mux.HandleFunc("POST /api/task/retry", api.HandleTaskRetry)
 
 	mux.Handle("/ws", HandleWS(svc))
 
@@ -47,6 +48,7 @@ func NewDevRouter(svc *training.Service) http.Handler {
 	mux.HandleFunc("GET /api/progress", api.HandleProgress)
 	mux.HandleFunc("GET /api/levels", api.HandleLevels)
 	mux.HandleFunc("POST /api/reset", api.HandleReset)
+	mux.HandleFunc("POST /api/task/retry", api.HandleTaskRetry)
 
 	mux.Handle("/ws", HandleWS(svc))
 
