@@ -297,3 +297,35 @@ func TestSetupFailureKeepsValidCWD(t *testing.T) {
 		t.Errorf("executor at recovered CWD failed: %v", execErr)
 	}
 }
+
+func TestCleanSandboxRemovesAllAndPreservesGitconfig(t *testing.T) {
+	root := t.TempDir()
+
+	// Create some files and dirs that should be cleaned
+	os.WriteFile(filepath.Join(root, ".gitconfig"), []byte("[user]\n"), 0o644)
+	os.WriteFile(filepath.Join(root, "file.txt"), []byte("data"), 0o644)
+	os.MkdirAll(filepath.Join(root, "subdir", "nested"), 0o755)
+	os.WriteFile(filepath.Join(root, "subdir", "nested", "deep.txt"), []byte("deep"), 0o644)
+	os.MkdirAll(filepath.Join(root, ".git", "objects"), 0o755)
+
+	if err := cleanSandbox(root); err != nil {
+		t.Fatalf("cleanSandbox: %v", err)
+	}
+
+	entries, _ := os.ReadDir(root)
+	names := make(map[string]bool)
+	for _, e := range entries {
+		names[e.Name()] = true
+	}
+
+	// .gitconfig must survive
+	if !names[".gitconfig"] {
+		t.Error(".gitconfig was deleted, should be preserved")
+	}
+	// everything else must be gone
+	for name := range names {
+		if name != ".gitconfig" {
+			t.Errorf("entry %q survived cleanSandbox, should be deleted", name)
+		}
+	}
+}

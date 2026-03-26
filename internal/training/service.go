@@ -101,9 +101,11 @@ func cleanSandbox(root string) error {
 	}
 	for _, e := range entries {
 		if e.Name() == ".gitconfig" {
-			continue // keep the controlled gitconfig
+			continue
 		}
-		os.RemoveAll(filepath.Join(root, e.Name()))
+		if err := os.RemoveAll(filepath.Join(root, e.Name())); err != nil {
+			return fmt.Errorf("clean %s: %w", e.Name(), err)
+		}
 	}
 	return nil
 }
