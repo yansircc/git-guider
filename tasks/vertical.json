@@ -1,0 +1,93 @@
+{
+  "L1.1": {
+    "name": "初始化仓库",
+    "tasks": [
+      {
+        "id": "L1.1-a",
+        "difficulty": 1,
+        "description": "创建一个新的 Git 仓库，新建 hello.txt 文件并完成第一次提交。",
+        "setup": [],
+        "verify": [
+          { "type": "commit_count", "min": 1 },
+          { "type": "file_exists", "path": "hello.txt" },
+          { "type": "status_clean" }
+        ],
+        "hints": ["git init 创建仓库", "echo 'hello' > hello.txt", "git add . && git commit -m 'first'"],
+        "on_pass_note": "git init 创建 .git 目录，HEAD 文件指向 refs/heads/main。"
+      }
+    ]
+  },
+  "L2.1": {
+    "name": "分支与合并",
+    "tasks": [
+      {
+        "id": "L2.1-a",
+        "difficulty": 1,
+        "description": "在已有仓库中创建 feature 分支，在上面提交一次，然后切回 main 并合并 feature。",
+        "setup": [
+          "git init",
+          "echo 'main' > file.txt",
+          "git add .",
+          "git commit -m 'init'"
+        ],
+        "verify": [
+          { "type": "branch_current", "name": "main" },
+          { "type": "commit_count", "min": 3 },
+          { "type": "merge_clean" }
+        ],
+        "hints": ["git branch feature", "git checkout feature", "做一次提交后 git checkout main && git merge feature"],
+        "on_pass_note": "merge 默认会尝试 fast-forward；如果两个分支有分叉则产生 merge commit。"
+      }
+    ]
+  },
+  "L3.1": {
+    "name": "远程交互",
+    "tasks": [
+      {
+        "id": "L3.1-a",
+        "difficulty": 2,
+        "description": "sandbox 已有一个 bare repo (origin.git) 和一个 clone (workspace)。在 workspace 中新增文件并 push 到 origin。",
+        "setup": [
+          "git init --bare origin.git",
+          "git clone origin.git workspace",
+          "cd workspace",
+          "echo 'hello' > README.md",
+          "git add .",
+          "git commit -m 'init'",
+          "git push -u origin main"
+        ],
+        "verify": [
+          { "type": "commit_count", "min": 2 },
+          { "type": "remote_exists", "name": "origin" },
+          { "type": "commit_count", "min": 2, "repo": "origin.git" }
+        ],
+        "hints": ["echo 'new' > new.txt", "git add . && git commit -m 'add new'", "git push"],
+        "on_pass_note": "git push 将本地 commits 同步到 remote 的对应分支。"
+      }
+    ]
+  },
+  "L4.1": {
+    "name": "并行工作",
+    "tasks": [
+      {
+        "id": "L4.1-a",
+        "difficulty": 2,
+        "description": "在已有仓库中使用 git worktree 创建一个位于 ../wt 的工作树，关联 feature 分支。",
+        "setup": [
+          "git init workspace",
+          "cd workspace",
+          "echo 'main' > file.txt",
+          "git add .",
+          "git commit -m 'init'",
+          "git branch feature"
+        ],
+        "verify": [
+          { "type": "worktree_count", "min": 2 },
+          { "type": "file_exists", "path": "../wt/file.txt" }
+        ],
+        "hints": ["git worktree add ../wt feature"],
+        "on_pass_note": "worktree 让你在同一个仓库的不同分支上并行工作，共享 .git 数据。"
+      }
+    ]
+  }
+}
