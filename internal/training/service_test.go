@@ -329,3 +329,75 @@ func TestCleanSandboxRemovesAllAndPreservesGitconfig(t *testing.T) {
 		}
 	}
 }
+
+// TestStartTaskBaselineSavedBeforeClean verifies that even if the old CWD
+// was a subdirectory that cleanSandbox deletes, the DB session already
+// points to sandboxRoot (which always exists) before clean runs.
+func TestStartTaskBaselineSavedBeforeClean(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+	sandboxBase := filepath.Join(tmpDir, "sandboxes")
+	os.MkdirAll(sandboxBase, 0o755)
+
+	store, err := NewStore(dbPath)
+	if err != nil {
+		t.Fatalf("NewStore: %v", err)
+	}
+	defer store.Close()
+
+	bank := &TaskBank{Topics: map[string]TopicEntry{
+		"T1.1": {Name: "simple", Tasks: []Task{{
+			ID:          "T1.1-a",
+			Difficulty:  1,
+			Description: "simple task",
+			Setup:       []string{},
+			Verify:      []map[string]any{{"type": "status_clean"}},
+		}}},
+	}}
+
+	svc := NewService(store, bank, sandboxBase)
+
+	sess, err := svc.CreateSession()
+	if err != nil {
+		t.Fatalf("CreateSession: %v", err)
+	}
+	defer sess.Destroy()
+
+	// Simulate a previous task that left CWD inside a subdirectory
+	subdir := filepath.Join(sess.SandboxRoot, "old-workspace")
+	os.MkdirAll(subdir, 0o755)
+	sess.CWD = subdir
+	sess.TaskID = "old-task"
+	store.SaveSession(sess)
+
+	// Confirm the subdir exists before StartTask
+	if _, err := os.Stat(subdir); err != nil {
+		t.Fatalf("subdir should exist before StartTask: %v", err)
+	}
+
+	// StartTask will save baseline (cwd=sandboxRoot) then clean (deleting subdir)
+	if err := svc.StartTask(sess, "T1.1-a"); err != nil {
+		t.Fatalf("StartTask: %v", err)
+	}
+
+	// The old subdir should be gone
+	if _, err := os.Stat(subdir); err == nil {
+		t.Error("old subdir should have been cleaned")
+	}
+
+	// DB session must point to sandboxRoot, not the deleted subdir
+	reloaded, err := store.LoadSession(sess.ID)
+	if err != nil {
+		t.Fatalf("LoadSession: %v", err)
+	}
+
+	// After successful StartTask, CWD is sandboxRoot (setup was empty)
+	if reloaded.CWD != sess.SandboxRoot {
+		t.Errorf("CWD=%q, want sandboxRoot=%q", reloaded.CWD, sess.SandboxRoot)
+	}
+
+	// The CWD directory must exist
+	if _, err := os.Stat(reloaded.CWD); err != nil {
+		t.Errorf("CWD %q does not exist: %v", reloaded.CWD, err)
+	}
+}

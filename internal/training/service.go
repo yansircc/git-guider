@@ -61,18 +61,20 @@ func (s *Service) StartTask(sess *session.Session, taskID string) error {
 		return err
 	}
 
-	// Clean the sandbox: remove all contents and recreate the directory
-	if err := cleanSandbox(sess.SandboxRoot); err != nil {
-		return fmt.Errorf("clean sandbox: %w", err)
-	}
-
-	// Persist a valid baseline immediately: cwd=sandboxRoot, no active task.
-	// If setup fails below, the DB still points to a valid directory.
+	// Persist baseline BEFORE cleaning: cwd=sandboxRoot (always valid since
+	// cleanSandbox only removes contents, not the root itself), no active task.
+	// This ensures the DB never holds a cwd that clean might have deleted.
 	sess.CWD = sess.SandboxRoot
 	sess.TaskID = ""
 	sess.TaskJSON = ""
 	if err := s.store.SaveSession(sess); err != nil {
 		return fmt.Errorf("save baseline session: %w", err)
+	}
+
+	// Clean the sandbox: remove all contents, propagate errors.
+	// Even if this fails partway, DB cwd=sandboxRoot is still valid.
+	if err := cleanSandbox(sess.SandboxRoot); err != nil {
+		return fmt.Errorf("clean sandbox: %w", err)
 	}
 
 	// Run setup commands through the unified executor
