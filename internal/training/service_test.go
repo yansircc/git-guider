@@ -226,3 +226,74 @@ func TestVerticalSliceD(t *testing.T) {
 		t.Fatal("task D did not pass")
 	}
 }
+
+// TestSetupFailureKeepsValidCWD verifies that if a setup command fails,
+// the DB session still points to a valid (sandboxRoot) directory.
+func TestSetupFailureKeepsValidCWD(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+	sandboxBase := filepath.Join(tmpDir, "sandboxes")
+	os.MkdirAll(sandboxBase, 0o755)
+
+	store, err := NewStore(dbPath)
+	if err != nil {
+		t.Fatalf("NewStore: %v", err)
+	}
+	defer store.Close()
+
+	// Build a task bank with a task whose setup will fail
+	bank := &TaskBank{Topics: map[string]TopicEntry{
+		"T1.1": {Name: "bad setup", Tasks: []Task{{
+			ID:          "T1.1-bad",
+			Difficulty:  1,
+			Description: "task with bad setup",
+			Setup: []string{
+				"git init",
+				"git checkout nonexistent-branch", // will fail
+			},
+			Verify: []map[string]any{{"type": "status_clean"}},
+		}}},
+	}}
+
+	svc := NewService(store, bank, sandboxBase)
+
+	sess, err := svc.CreateSession()
+	if err != nil {
+		t.Fatalf("CreateSession: %v", err)
+	}
+	defer sess.Destroy()
+
+	// StartTask should fail on the bad setup command
+	err = svc.StartTask(sess, "T1.1-bad")
+	if err == nil {
+		t.Fatal("expected StartTask to fail, but it succeeded")
+	}
+
+	// Reload session from DB — cwd must be valid (sandboxRoot, which exists)
+	reloaded, err := store.LoadSession(sess.ID)
+	if err != nil {
+		t.Fatalf("LoadSession: %v", err)
+	}
+
+	// CWD should be sandboxRoot
+	if reloaded.CWD != sess.SandboxRoot {
+		t.Errorf("after setup failure, CWD=%q, want sandboxRoot=%q", reloaded.CWD, sess.SandboxRoot)
+	}
+
+	// TaskID should be empty (no active task)
+	if reloaded.TaskID != "" {
+		t.Errorf("after setup failure, TaskID=%q, want empty", reloaded.TaskID)
+	}
+
+	// The directory must actually exist
+	if _, err := os.Stat(reloaded.CWD); err != nil {
+		t.Errorf("CWD %q does not exist: %v", reloaded.CWD, err)
+	}
+
+	// An executor pointed at this CWD should work
+	exec := cmdexec.NewExecutor(reloaded.SandboxRoot, reloaded.CWD)
+	_, execErr := exec.Run("pwd")
+	if execErr != nil {
+		t.Errorf("executor at recovered CWD failed: %v", execErr)
+	}
+}

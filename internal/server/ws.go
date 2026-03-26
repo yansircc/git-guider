@@ -61,9 +61,10 @@ func HandleWS(svc *training.Service) http.Handler {
 			}
 
 			if msg.Type == "sync" {
-				// Frontend requests a prompt refresh (e.g. after task start)
+				// Frontend requests a full prompt redraw (e.g. after task start).
+				// Use "prompt-replace" so the terminal clears the current line first.
 				mu.Unlock()
-				sendWS(conn, "prompt", buildPrompt(exec))
+				sendWS(conn, "prompt-replace", buildPrompt(exec))
 				continue
 			}
 

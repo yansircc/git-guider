@@ -84,8 +84,9 @@ export async function startNextTask() {
   notify()
   try {
     const res = await api.nextTask()
-    if (res.error) {
-      state = { ...state, loading: false, message: res.error }
+    if (res.done) {
+      // All topics mastered — success terminal state
+      state = { ...state, loading: false, task: null, message: res.message || 'All topics mastered!' }
     } else {
       state = { ...state, task: res.task, loading: false }
       // Notify terminal to sync CWD/prompt after setup changed session
@@ -93,6 +94,7 @@ export async function startNextTask() {
     }
     notify()
   } catch (e: any) {
+    // HTTP errors (4xx/5xx) land here via api.ts res.ok check
     state = { ...state, loading: false, message: e.message }
     notify()
   }
@@ -125,11 +127,12 @@ export async function startSpecificTask(taskId: string) {
   state = { ...state, loading: true, verifyResult: null, message: '' }
   notify()
   try {
-    const res = await api.nextTask() // server will assign the right task
-    if (res.error) {
-      state = { ...state, loading: false, message: res.error }
+    const res = await api.nextTask()
+    if (res.done) {
+      state = { ...state, loading: false, task: null, message: res.message || 'All topics mastered!' }
     } else {
       state = { ...state, task: res.task, loading: false }
+      window.dispatchEvent(new CustomEvent('task-started'))
     }
     notify()
   } catch (e: any) {

@@ -65,19 +65,29 @@ func (s *Service) StartTask(sess *session.Session, taskID string) error {
 	if err := cleanSandbox(sess.SandboxRoot); err != nil {
 		return fmt.Errorf("clean sandbox: %w", err)
 	}
+
+	// Persist a valid baseline immediately: cwd=sandboxRoot, no active task.
+	// If setup fails below, the DB still points to a valid directory.
 	sess.CWD = sess.SandboxRoot
+	sess.TaskID = ""
+	sess.TaskJSON = ""
+	if err := s.store.SaveSession(sess); err != nil {
+		return fmt.Errorf("save baseline session: %w", err)
+	}
 
 	// Run setup commands through the unified executor
 	exec := cmdexec.NewExecutor(sess.SandboxRoot, sess.CWD)
 	for _, cmd := range task.Setup {
 		result, err := exec.Run(cmd)
 		if err != nil {
+			// Setup failed. DB already has cwd=sandboxRoot (valid).
 			return fmt.Errorf("setup command %q: %w", cmd, err)
 		}
 		sess.CWD = result.CWD
 		exec.CWD = result.CWD
 	}
 
+	// Setup succeeded — now persist the final state with the active task.
 	sess.TaskID = taskID
 	sess.TaskJSON = taskToJSON(task)
 	sess.IssuedAt = time.Now()

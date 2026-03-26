@@ -31,6 +31,12 @@
           currentPrompt = msg.data
           term.write(`\x1b[32m${currentPrompt}\x1b[0m`)
           break
+        case 'prompt-replace':
+          // Full line redraw: erase current line (prompt + any partial input), rewrite
+          currentPrompt = msg.data
+          term.write(`\r\x1b[2K\x1b[32m${currentPrompt}\x1b[0m`)
+          inputBuffer = ''
+          break
       }
     }
 

@@ -60,7 +60,8 @@ func (a *API) HandleTaskNext(w http.ResponseWriter, r *http.Request) {
 
 	task, err := a.svc.SelectNextTask(sess.ID)
 	if err != nil {
-		writeJSONError(w, 200, err.Error())
+		// All topics mastered — not an error, a success terminal state
+		writeJSON(w, map[string]any{"done": true, "message": err.Error()})
 		return
 	}
 
